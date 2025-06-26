@@ -14,6 +14,7 @@ function TransactionHistory() {
   const [transactions, setTransactions] = useState([]);
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState("");
+  const [cashierFilter, setCashierFilter] = useState("");
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(null);
   const [selectedTransaction, setSelectedTransaction] = useState(null);
@@ -32,7 +33,8 @@ function TransactionHistory() {
       status: "Completed",
       paymentMethod: "Cash",
       type: "store",
-      discountsAndPromotions: "None"
+      discountsAndPromotions: "None",
+      cashier: "Maria Santos"
     },
     {
       id: "ON-034",
@@ -50,7 +52,8 @@ function TransactionHistory() {
       status: "Completed",
       paymentMethod: "Card",
       type: "online",
-      discountsAndPromotions: "None"
+      discountsAndPromotions: "None",
+      cashier: "Online System"
     },
     {
       id: "ST-068",
@@ -67,7 +70,8 @@ function TransactionHistory() {
       paymentMethod: "GCash",
       referenceNumber: "GC-2025062316200001",
       type: "store",
-      discountsAndPromotions: "Student Discount - 10%"
+      discountsAndPromotions: "Student Discount - 10%",
+      cashier: "John Dela Cruz"
     },
     {
       id: "ON-035",
@@ -83,7 +87,8 @@ function TransactionHistory() {
       status: "Processing",
       paymentMethod: "Digital Wallet",
       type: "online",
-      discountsAndPromotions: "None"
+      discountsAndPromotions: "None",
+      cashier: "Online System"
     },
     {
       id: "ST-069",
@@ -103,7 +108,8 @@ function TransactionHistory() {
       paymentMethod: "GCash",
       referenceNumber: "GC-2025062409300001",
       type: "store",
-      discountsAndPromotions: "Senior Citizen"
+      discountsAndPromotions: "Senior Citizen",
+      cashier: "Maria Santos"
     }
   ];
 
@@ -137,19 +143,22 @@ function TransactionHistory() {
   const filteredTransactions = useMemo(() => {
     return transactions.filter(transaction => {
       const matchesTab = activeTab === "store" ? transaction.type === "store" : transaction.type === "online";
-      const matchesSearch = (transaction.id || '').toString().includes(searchTerm);
+      const matchesSearch = (transaction.id || '').toString().toLowerCase().includes(searchTerm.toLowerCase()) ||
+                           (transaction.cashier || '').toLowerCase().includes(searchTerm.toLowerCase());
       const matchesStatus = statusFilter === "" || transaction.status === statusFilter;
+      const matchesCashier = cashierFilter === "" || transaction.cashier === cashierFilter;
 
       // Date filtering - compare only the date part (YYYY-MM-DD)
       const transactionDate = new Date(transaction.date).toISOString().slice(0, 10);
       const matchesDate = filterDate === "" || transactionDate === filterDate;
 
-      return matchesTab && matchesSearch && matchesStatus && matchesDate;
+      return matchesTab && matchesSearch && matchesStatus && matchesCashier && matchesDate;
     });
-  }, [activeTab, transactions, searchTerm, statusFilter, filterDate]);
+  }, [activeTab, transactions, searchTerm, statusFilter, cashierFilter, filterDate]);
 
   useEffect(() => {
     setStatusFilter("");
+    setCashierFilter("");
     setSearchTerm("");
     setFilterDate("");
   }, [activeTab]);
@@ -161,10 +170,12 @@ function TransactionHistory() {
     return [...new Set(currentTabTransactions.map(item => item.status).filter(Boolean))];
   }, [activeTab, transactions]);
 
-  useEffect(() => {
-    setStatusFilter("");
-    setSearchTerm("");
-  }, [activeTab]);
+  const uniqueCashiers = useMemo(() => {
+    const currentTabTransactions = transactions.filter(transaction => 
+      activeTab === "store" ? transaction.type === "store" : transaction.type === "online"
+    );
+    return [...new Set(currentTabTransactions.map(item => item.cashier).filter(Boolean))];
+  }, [activeTab, transactions]);
 
   const handleRowClick = (row) => {
     setSelectedTransaction(row);
@@ -181,26 +192,20 @@ function TransactionHistory() {
       name: "TRANSACTION ID",
       selector: (row) => row.id,
       sortable: true,
-      width: "17%",
+      width: "15%",
     },
     {
       name: "DATE",
       selector: (row) => new Date(row.date).toLocaleDateString(),
       sortable: true,
-      width: "17%",
+      width: "13%",
     },
     {
-      name: "ITEMS",
-      selector: (row) => row.items?.length || 0,
-      center: true,
-      width: "17%",
-    },
-    {
-      name: "TOTAL",
-      selector: (row) => `₱${parseFloat(row.total).toFixed(2)}`,
+      name: "CASHIER",
+      selector: (row) => row.cashier || "N/A",
       center: true,
       sortable: true,
-      width: "17%",
+      width: "22%",
     },
     {
       name: "STATUS",
@@ -212,13 +217,26 @@ function TransactionHistory() {
       ),
       center: true,
       sortable: true,
-      width: "16%",
+      width: "13%",
+    },
+    {
+      name: "ITEMS",
+      selector: (row) => row.items?.length || 0,
+      center: true,
+      width: "10%",
     },
     {
       name: "PAYMENT METHOD",
       selector: (row) => row.paymentMethod || "N/A",
       center: true,
-      width: "16%",
+      width: "15%",
+    },
+    {
+      name: "TOTAL",
+      selector: (row) => `₱${parseFloat(row.total).toFixed(2)}`,
+      center: true,
+      sortable: true,
+      width: "12%",
     },
   ];
 
@@ -238,7 +256,7 @@ function TransactionHistory() {
             <div className="filter-bar">
               <input 
                 type="text" 
-                placeholder="Search by Transaction ID..." 
+                placeholder="Search by Transaction ID or Cashier..." 
                 value={searchTerm} 
                 onChange={(e) => setSearchTerm(e.target.value)} 
               />
@@ -248,6 +266,12 @@ function TransactionHistory() {
                 onChange={(e) => setFilterDate(e.target.value)} 
                 title="Filter by Date"
               />
+              <select value={cashierFilter} onChange={(e) => setCashierFilter(e.target.value)}>
+                <option value="">Cashier: All</option>
+                {uniqueCashiers.map((cashier) => (
+                  <option key={cashier} value={cashier}>{cashier}</option>
+                ))}
+              </select>
               <select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)}>
                 <option value="">Status: All</option>
                 {uniqueStatuses.map((status) => (
@@ -340,15 +364,18 @@ function TransactionHistory() {
                       <span>{new Date(selectedTransaction.date).toLocaleString()}</span>
                     </div>
                   </div>
-
-                  {selectedTransaction.paymentMethod === "GCash" && selectedTransaction.referenceNumber && (
-                    <div className="modal-row">
+                  <div className="modal-row">
+                    <div className="modal-col">
+                      <label>Cashier:</label>
+                      <span>{selectedTransaction.cashier}</span>
+                    </div>
+                    {selectedTransaction.paymentMethod === "GCash" && selectedTransaction.referenceNumber && (
                       <div className="modal-col">
                         <label>Reference Number:</label>
                         <span>{selectedTransaction.referenceNumber}</span>
                       </div>
-                    </div>
-                  )}
+                    )}
+                  </div>
                 </div>
 
                 <div className="modal-section">

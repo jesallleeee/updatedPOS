@@ -5,6 +5,9 @@ import logo from '../assets/logo.png';
 import { HiOutlineShoppingBag, HiOutlineClipboardList, HiOutlineChartBar, HiOutlineTrash } from 'react-icons/hi';
 import { FaBell, FaChevronDown } from 'react-icons/fa';
 import { jwtDecode } from 'jwt-decode';
+import { confirmAlert } from 'react-confirm-alert';
+import 'react-confirm-alert/src/react-confirm-alert.css'; // default styles
+import './confirmAlertCustom.css';
 
 const Navbar = ({ isCartOpen, isOrderPanelOpen }) => {
   const [isDropdownOpen, setDropdownOpen] = useState(false);
@@ -23,6 +26,23 @@ const Navbar = ({ isCartOpen, isOrderPanelOpen }) => {
     localStorage.removeItem('username');
     navigate('/');
   }, [navigate]);
+
+  const confirmLogout = () => {
+    confirmAlert({
+      title: 'Confirm Logout',
+      message: 'Are you sure you want to log out?',
+      buttons: [
+        {
+          label: 'Yes',
+          onClick: () => handleLogout()
+        },
+        {
+          label: 'No',
+          onClick: () => {}
+        }
+      ]
+    });
+  };
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
@@ -115,7 +135,7 @@ const Navbar = ({ isCartOpen, isOrderPanelOpen }) => {
           {isDropdownOpen && (
             <div className="nav-profile-dropdown">
               <ul>
-                <li onClick={handleLogout}>Logout</li>
+                <li onClick={confirmLogout}>Logout</li>
               </ul>
             </div>
           )}
@@ -125,4 +145,4 @@ const Navbar = ({ isCartOpen, isOrderPanelOpen }) => {
   );
 };
 
-export default Navbar;
+export default Navbar; 

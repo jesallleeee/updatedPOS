@@ -50,9 +50,12 @@ function Orders() {
   // Fetch orders from the API on component mount and at regular intervals
   useEffect(() => {
     const fetchOrders = async () => {
-      // Don't show the main "Loading..." text on background refreshes
-      if (storeOrders.length === 0 && onlineOrders.length === 0) {
+      // Close order panel when starting to load
+      const isInitialLoad = storeOrders.length === 0 && onlineOrders.length === 0;
+      
+      if (isInitialLoad) {
         setLoading(true);
+        setSelectedOrder(null); // Close order panel during initial load
       }
       setError(null);
       
@@ -111,6 +114,8 @@ function Orders() {
       } catch (e) {
         console.error("Failed to fetch orders:", e);
         setError(e.message || "Failed to load orders. Please check connection and try again.");
+        // Close order panel on error
+        setSelectedOrder(null);
       } finally {
         setLoading(false);
       }
@@ -200,7 +205,14 @@ function Orders() {
     setSelectedOrder(null);
   };
 
+  // Updated useEffect to handle selectedOrder logic better
   useEffect(() => {
+    // Don't auto-select orders if we're loading or have an error
+    if (loading || error) {
+      setSelectedOrder(null);
+      return;
+    }
+
     if (filteredData.length > 0) {
       if (!selectedOrder || !filteredData.find(o => o.id === selectedOrder.id)) {
         setSelectedOrder(filteredData[0]);
@@ -208,7 +220,7 @@ function Orders() {
     } else {
       setSelectedOrder(null);
     }
-  }, [filteredData, selectedOrder]);
+  }, [filteredData, selectedOrder, loading, error]);
   
   useEffect(() => {
     const currentOrders = activeTab === "store" ? storeOrders : onlineOrders;
@@ -226,11 +238,14 @@ function Orders() {
     }
   }, [activeTab, storeOrders, onlineOrders, getTodayLocalDate, getMostRecentOrderDate]);
 
+  // Determine if order panel should be shown
+  const shouldShowOrderPanel = selectedOrder && !loading && !error;
+
   return (
     <div className="orders-main-container">
-      {/* The username state is passed here. The Navbar component can now use it. */}
-      <Navbar isOrderPanelOpen={true} username={username} />
-      <div className="orders-content-container orders-panel-open">
+      {/* Pass the panel state to Navbar for proper layout adjustment */}
+      <Navbar isOrderPanelOpen={shouldShowOrderPanel} username={username} />
+      <div className={`orders-content-container ${shouldShowOrderPanel ? 'orders-panel-open' : ''}`}>
         <div className="orders-tab-container">
           <button className={`orders-tab ${activeTab === "store" ? "active" : ""}`} onClick={() => handleTabChange("store")}>Store</button>
           <button className={`orders-tab ${activeTab === "online" ? "active" : ""}`} onClick={() => handleTabChange("online")}>Online</button>
@@ -311,7 +326,7 @@ function Orders() {
           )}
         </div>
         
-        {selectedOrder && (
+        {shouldShowOrderPanel && (
           <OrderPanel
             order={selectedOrder}
             isOpen={true}
